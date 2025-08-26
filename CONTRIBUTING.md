@@ -27,7 +27,7 @@ Thank you for your interest in contributing to this project! We welcome contribu
 
 1. **Fork the repository**
    ```bash
-   git clone https://github.com/yourusername/crypto-volatility-analysis.git
+   git clone https://github.com/imanhavangi/crypto-volatility-analysis.git
    cd crypto-volatility-analysis
    ```
 

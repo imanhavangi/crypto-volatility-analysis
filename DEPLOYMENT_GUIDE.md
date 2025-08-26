@@ -39,8 +39,8 @@ This guide will help you publish your Enhanced Crypto Volatility Analysis projec
 Run these commands in your terminal:
 
 ```bash
-# Add GitHub remote (replace 'yourusername' with your GitHub username)
-git remote add origin https://github.com/yourusername/crypto-volatility-analysis.git
+# Add GitHub remote (replace 'imanhavangi' with your GitHub username)
+git remote add origin https://github.com/imanhavangi/crypto-volatility-analysis.git
 
 # Push to GitHub
 git push -u origin main
@@ -75,7 +75,7 @@ Update your repository with:
 
 **Website:** (if you have one)
 ```
-https://yourusername.github.io/crypto-volatility-analysis
+https://imanhavangi.github.io/crypto-volatility-analysis
 ```
 
 ## 🔧 Post-Deployment Setup
@@ -100,10 +100,10 @@ Create `.github/workflows/` for:
 Add these badges to your README.md:
 
 ```markdown
-[![GitHub stars](https://img.shields.io/github/stars/yourusername/crypto-volatility-analysis)](https://github.com/yourusername/crypto-volatility-analysis/stargazers)
-[![GitHub forks](https://img.shields.io/github/forks/yourusername/crypto-volatility-analysis)](https://github.com/yourusername/crypto-volatility-analysis/network)
-[![GitHub issues](https://img.shields.io/github/issues/yourusername/crypto-volatility-analysis)](https://github.com/yourusername/crypto-volatility-analysis/issues)
-[![GitHub license](https://img.shields.io/github/license/yourusername/crypto-volatility-analysis)](https://github.com/yourusername/crypto-volatility-analysis/blob/main/LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/imanhavangi/crypto-volatility-analysis)](https://github.com/imanhavangi/crypto-volatility-analysis/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/imanhavangi/crypto-volatility-analysis)](https://github.com/imanhavangi/crypto-volatility-analysis/network)
+[![GitHub issues](https://img.shields.io/github/issues/imanhavangi/crypto-volatility-analysis)](https://github.com/imanhavangi/crypto-volatility-analysis/issues)
+[![GitHub license](https://img.shields.io/github/license/imanhavangi/crypto-volatility-analysis)](https://github.com/imanhavangi/crypto-volatility-analysis/blob/main/LICENSE)
 ```
 
 ## 📈 Promoting Your Project
@@ -162,4 +162,4 @@ Track your project's growth:
 
 ---
 
-**Ready to deploy? Replace `yourusername` with your actual GitHub username in all URLs and commands above!** 🚀 
+**Ready to deploy? Replace `imanhavangi` with your actual GitHub username in all URLs and commands above!** 🚀 

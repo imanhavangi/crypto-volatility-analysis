@@ -19,7 +19,7 @@ setup(
     description="A comprehensive analysis tool to identify the best cryptocurrency for scalping/day trading",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/crypto-volatility-analysis",  # Replace with your repo URL
+    url="https://github.com/imanhavangi/crypto-volatility-analysis",  # Replace with your repo URL
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -45,8 +45,8 @@ setup(
     },
     keywords="cryptocurrency, trading, volatility, analysis, scalping, fintech, ccxt",
     project_urls={
-        "Bug Reports": "https://github.com/yourusername/crypto-volatility-analysis/issues",
-        "Source": "https://github.com/yourusername/crypto-volatility-analysis",
-        "Documentation": "https://github.com/yourusername/crypto-volatility-analysis#readme",
+        "Bug Reports": "https://github.com/imanhavangi/crypto-volatility-analysis/issues",
+        "Source": "https://github.com/imanhavangi/crypto-volatility-analysis",
+        "Documentation": "https://github.com/imanhavangi/crypto-volatility-analysis#readme",
     },
 ) 

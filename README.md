@@ -27,7 +27,7 @@
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/crypto-volatility-analysis.git
+   git clone https://github.com/imanhavangi/crypto-volatility-analysis.git
    cd crypto-volatility-analysis
    ```
 
@@ -219,7 +219,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you encounter any issues or have questions:
 
-1. Check the [Issues](https://github.com/yourusername/crypto-volatility-analysis/issues) section
+1. Check the [Issues](https://github.com/imanhavangi/crypto-volatility-analysis/issues) section
 2. Create a new issue with detailed description
 3. Include error messages and system information
 
