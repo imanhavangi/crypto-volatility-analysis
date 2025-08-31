@@ -1,0 +1,84 @@
+{
+  "feature_columns": [
+    "open",
+    "volume",
+    "rsi",
+    "macd",
+    "macd_histogram",
+    "bb_position",
+    "volatility_5m",
+    "volatility_15m",
+    "volume_ratio",
+    "price_change_1m",
+    "price_change_5m",
+    "price_change_15m",
+    "trend_strength",
+    "volatility_percentile",
+    "volume_percentile",
+    "rsi_divergence",
+    "macd_momentum",
+    "volatility_regime",
+    "spread_proxy",
+    "volume_price_trend",
+    "momentum_consistency",
+    "trend_regime",
+    "volatility_normalized"
+  ],
+  "entry_cv_scores": [
+    0.16654904728299225,
+    0.1306532663316583,
+    0.9507488614488944,
+    0.9686071319719598,
+    0.9824742268041237
+  ],
+  "exit_cv_scores": [
+    0.17391304347826086,
+    0.2041649652919559,
+    0.9250932652660514,
+    0.971495713477523,
+    0.979709894664134
+  ],
+  "test_results": {
+    "threshold_0.3": {
+      "entry_signals": "10227",
+      "exit_signals": "8061",
+      "entry_f1": 0.15217970345378673,
+      "exit_f1": 0.20931758530183728,
+      "entry_precision": 0.08379779016329324,
+      "entry_recall": 0.8272200772200772
+    },
+    "threshold_0.4": {
+      "entry_signals": "8507",
+      "exit_signals": "6831",
+      "entry_f1": 0.1603269412134549,
+      "exit_f1": 0.2221379833206975,
+      "entry_precision": 0.08992594334077818,
+      "entry_recall": 0.7384169884169884
+    },
+    "threshold_0.5": {
+      "entry_signals": "6660",
+      "exit_signals": "5741",
+      "entry_f1": 0.1683991683991684,
+      "exit_f1": 0.2365181711606096,
+      "entry_precision": 0.0972972972972973,
+      "entry_recall": 0.6254826254826255
+    },
+    "threshold_0.6": {
+      "entry_signals": "5036",
+      "exit_signals": "4636",
+      "entry_f1": 0.16930171277997366,
+      "exit_f1": 0.24409861863962232,
+      "entry_precision": 0.10206513105639396,
+      "entry_recall": 0.49613899613899615
+    },
+    "threshold_0.7": {
+      "entry_signals": "3633",
+      "exit_signals": "3578",
+      "entry_f1": 0.16577425572927823,
+      "exit_f1": 0.24930272473718088,
+      "entry_precision": 0.10652353426919901,
+      "entry_recall": 0.3735521235521235
+    }
+  },
+  "model_type": "advanced_anti_overfitting"
+}

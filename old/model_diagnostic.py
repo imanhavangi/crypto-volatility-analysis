@@ -109,7 +109,7 @@ class ModelDiagnostic:
         
         # تست مدل‌های موجود
         models_to_test = [
-            ('best_improved_model.h5', 'Improved Model'),
+            ('best_improved_model.keras', 'Improved Model'),
             ('best_trading_model.h5', 'Original Deep Learning Model')
         ]
         

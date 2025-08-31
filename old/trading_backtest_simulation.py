@@ -9,7 +9,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class TradingBacktestSimulator:
-    def __init__(self, model_path='best_improved_model.h5', initial_balance=1000.0):
+    def __init__(self, model_path='best_improved_model.keras', initial_balance=1000.0):
         """
         سیستم شبیه‌سازی backtesting با مدل deep learning
         
@@ -315,7 +315,7 @@ def main():
     
     # ایجاد simulator
     simulator = TradingBacktestSimulator(
-        model_path='best_improved_model.h5',
+        model_path='best_improved_model.keras',
         initial_balance=1000.0
     )
     

@@ -818,8 +818,9 @@ class OptimalTradingAnalyzer:
         ax6.grid(True, alpha=0.3)
         
         plt.tight_layout()
-        plt.savefig('/home/f.kalati/Documents/crypto/optimal_trading_analysis.png', 
-                   dpi=300, bbox_inches='tight')
+        # Save in current workspace directory
+        output_path = os.path.join(os.getcwd(), 'optimal_trading_analysis.png')
+        plt.savefig(output_path, dpi=300, bbox_inches='tight')
         plt.show()
     
     def save_training_data(self, df: pd.DataFrame, optimal_trades: List[OptimalTrade]):
@@ -841,8 +842,9 @@ class OptimalTradingAnalyzer:
         training_data = df[feature_columns + target_columns].copy()
         training_data = training_data.dropna()
         
-        # Save to CSV
-        training_data.to_csv('/home/f.kalati/Documents/crypto/training_data.csv')
+        # Save to CSV in current workspace directory
+        training_data_path = os.path.join(os.getcwd(), 'training_data.csv')
+        training_data.to_csv(training_data_path)
         
         # Save optimal trades for reference
         trades_df = pd.DataFrame([{
@@ -855,11 +857,13 @@ class OptimalTradingAnalyzer:
             'hold_time_minutes': t.hold_time_minutes
         } for t in optimal_trades])
         
-        trades_df.to_csv('/home/f.kalati/Documents/crypto/optimal_trades.csv', index=False)
+        optimal_trades_path = os.path.join(os.getcwd(), 'optimal_trades.csv')
+        trades_df.to_csv(optimal_trades_path, index=False)
         
         print(f"   ✅ Saved {len(training_data)} training samples")
         print(f"   ✅ Saved {len(trades_df)} optimal trades")
-        print(f"   📁 Files: training_data.csv, optimal_trades.csv")
+        print(f"   📁 Files saved in workspace: training_data.csv, optimal_trades.csv")
+        print(f"   📂 Workspace: {os.getcwd()}")
 
 # ---------------------------------------------------------------------------
 # Main Execution
@@ -957,7 +961,7 @@ def main():
             print("-" * 40)
             analyzer.plot_optimal_analysis(df, optimal_trades, performance)
             
-            print(f"\n📊 Analysis complete! Visualization saved to: optimal_trading_analysis.png")
+            print(f"\n📊 Analysis complete! Visualization saved to: {os.path.join(os.getcwd(), 'optimal_trading_analysis.png')}")
             
             # Next steps guidance
             print(f"\n🤖 NEXT STEPS: Deep Learning Model")

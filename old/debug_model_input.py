@@ -97,7 +97,7 @@ def main():
     
     # بارگذاری مدل
     print("🚀 بارگذاری مدل...")
-    model = tf.keras.models.load_model('best_improved_model.h5')
+    model = tf.keras.models.load_model('best_improved_model.keras')
     
     # ایجاد scaler مشابه backtest
     scaler, feature_columns = create_proper_scaler()

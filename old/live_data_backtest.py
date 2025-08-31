@@ -11,7 +11,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class LiveDataBacktester:
-    def __init__(self, model_path='best_improved_model.h5', initial_balance=1000.0):
+    def __init__(self, model_path='best_improved_model.keras', initial_balance=1000.0):
         """
         سیستم Backtesting با داده‌های جدید از API
         
@@ -371,7 +371,7 @@ def main():
     
     # ایجاد backtester
     backtester = LiveDataBacktester(
-        model_path='best_improved_model.h5',
+        model_path='best_improved_model.keras',
         initial_balance=1000.0
     )
     

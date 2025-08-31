@@ -11,7 +11,7 @@ def simple_test():
     
     # بارگذاری مدل
     print("🚀 بارگذاری مدل...")
-    model = tf.keras.models.load_model('best_improved_model.h5')
+    model = tf.keras.models.load_model('best_improved_model.keras')
     print("✅ مدل بارگذاری شد")
     
     # بررسی ورودی مدل

@@ -1,0 +1,27 @@
+{
+  "entry_threshold": 0.05,
+  "exit_threshold": 0.6000000000000002,
+  "feature_columns": [
+    "open",
+    "high",
+    "low",
+    "close",
+    "volume",
+    "rsi",
+    "macd",
+    "macd_signal",
+    "macd_histogram",
+    "bb_position",
+    "volatility_5m",
+    "volatility_15m",
+    "volume_ratio",
+    "price_change_1m",
+    "price_change_5m",
+    "price_change_15m",
+    "trend_strength",
+    "volatility_percentile",
+    "volume_percentile"
+  ],
+  "balancing_method": "hybrid",
+  "training_completed": "2025-08-26T18:53:33.315556"
+}

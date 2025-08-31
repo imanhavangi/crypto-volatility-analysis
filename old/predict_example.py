@@ -6,7 +6,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class TradingPredictor:
-    def __init__(self, model_path='best_improved_model.h5'):
+    def __init__(self, model_path='best_improved_model.keras'):
         """
         سیستم پیش‌بینی ترید با مدل آموزش دیده
         """
