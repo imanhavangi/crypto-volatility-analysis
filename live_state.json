@@ -1,0 +1,21 @@
+{
+  "model1": {
+    "balance": 1000.0,
+    "position": null
+  },
+  "model2": {
+    "balance": 1000.0,
+    "position": null
+  },
+  "last_ts": null,
+  "_calib": {
+    "model1": {
+      "tau": 0.8999999999999999,
+      "gamma": 0.3
+    },
+    "model2": {
+      "tau": 0.95,
+      "gamma": 0.3
+    }
+  }
+}
