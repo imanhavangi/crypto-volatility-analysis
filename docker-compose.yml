@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  crypto-live-trader:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crypto-live-trader
+    restart: unless-stopped
+    
+    environment:
+      # Telegram configuration (set these in .env file)
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      
+      # Python configuration
+      - PYTHONUNBUFFERED=1
+      - TZ=UTC
+    
+    volumes:
+      # Persist state file
+      - ./live_state.json:/app/live_state.json
+      
+      # Mount models directory (read-only)
+      - ./models:/app/models:ro
+      
+      # Mount data directory (optional, for caching)
+      - ./data:/app/data
+      
+      # Mount logs directory (optional)
+      - ./logs:/app/logs
+    
+    networks:
+      - crypto-network
+    
+    # Resource limits (adjust based on your server)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0 if os.path.exists('live_state.json') else 1)"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+networks:
+  crypto-network:
+    driver: bridge
+

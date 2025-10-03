@@ -11,12 +11,19 @@ Live 1m signal runner for two models (separate balances, shared Telegram channel
 """
 
 import os
+import sys
 import time
 import json
 import math
 import signal
 import traceback
 from datetime import datetime, timezone
+
+# Fix encoding for Windows console
+if sys.platform == 'win32':
+    import codecs
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
 import requests
 import numpy as np
