@@ -14,7 +14,6 @@ import os
 import sys
 import time
 import json
-import math
 import signal
 import traceback
 from datetime import datetime, timezone
@@ -106,15 +105,27 @@ def load_meta(meta_path):
     return feature_cols, center, scale, lookback, cap
 
 def transform_with_robust_scaler(X, center, scale):
+    """Safe scaling with NaN/Inf protection."""
     Xn = X.copy().astype(float)
+    
+    # 1) Fill NaN with center values before scaling to ensure (X-center) is defined
     if center is not None:
-        Xn = Xn - center
-    Xn = Xn / scale
-    # median impute
-    med = np.nanmedian(Xn, axis=0)
-    inds = np.where(np.isnan(Xn))
-    if len(inds[0]) > 0:
-        Xn[inds] = np.take(med, inds[1])
+        # Broadcast center to Xn shape and fill NaN
+        Xn = np.where(np.isnan(Xn), center, Xn)
+    else:
+        # Fallback: fill with 0
+        Xn = np.where(np.isnan(Xn), 0.0, Xn)
+    
+    # 2) Safe division: scale≈0 → 1.0 to avoid division by zero
+    scale_arr = np.array(scale, dtype=float)
+    scale_safe = np.where(np.abs(scale_arr) < 1e-9, 1.0, scale_arr)
+    
+    # 3) Apply scaling
+    Xn = (Xn - (center if center is not None else 0.0)) / scale_safe
+    
+    # 4) Final safety: replace any remaining NaN/Inf with 0
+    Xn = np.nan_to_num(Xn, nan=0.0, posinf=0.0, neginf=0.0)
+    
     return Xn
 
 def send_telegram(msg):
@@ -171,11 +182,10 @@ def load_exchange(name):
         raise ValueError(f"Symbol {SYMBOL} not in {name}")
     return ex
 
-def fetch_last_candles(ex, symbol, timeframe, n=LOOKBACK):
-    """Fetch last n candles (including the most recently closed)."""
-    # Fetch extra candles since technical indicators will drop initial rows due to NaN
-    # We need at least n valid rows after indicator calculation
-    fetch_limit = max(n + 50, 150)  # Fetch enough to ensure we have n valid after indicators
+def fetch_last_candles(ex, symbol, timeframe, n=LOOKBACK, safety=600):
+    """Fetch last n candles with large safety margin for indicator warmup."""
+    # Fetch 600 candles to ensure all indicators (ATR, Ichimoku, long EMAs) are fully warmed up
+    fetch_limit = max(n, safety)
     candles = ex.fetch_ohlcv(symbol, timeframe=timeframe, limit=fetch_limit)
     df = pd.DataFrame(candles, columns=["timestamp_ms","open","high","low","close","volume"])
     df["timestamp"] = pd.to_datetime(df["timestamp_ms"], unit="ms", utc=True)
@@ -191,8 +201,6 @@ def build_features(df_raw: pd.DataFrame) -> pd.DataFrame:
     Uses OptimalTradingAnalyzer.calculate_technical_indicators to ensure parity.
     Also adds additional features that were created during training.
     """
-    import warnings
-    import sys
     from io import StringIO
     
     ana = OptimalTradingAnalyzer(initial_balance=1000)
@@ -232,21 +240,49 @@ def build_features(df_raw: pd.DataFrame) -> pd.DataFrame:
     
     return df
 
-def make_sequence_matrix(df_feat: pd.DataFrame, feature_cols: list, L: int):
-    """Return (L, F) numpy ready for model."""
-    # Work with a copy to avoid modifying the original dataframe
-    df_work = df_feat.copy()
+def make_sequence_matrix(df_feat: pd.DataFrame, feature_cols: list, L: int, center=None):
+    """
+    Return (L, F) numpy ready for model with exact column alignment.
+    Missing columns are filled with training median (center) to avoid NaN propagation.
+    """
+    # Create DataFrame with exact feature_cols order and dtype
+    X = pd.DataFrame(index=df_feat.index, columns=feature_cols, dtype=float)
     
-    # Create missing features filled with NaN (will be imputed by scaler transform)
-    missing = [c for c in feature_cols if c not in df_work.columns]
-    if missing:
-        # Only warn on first iteration or if count changes
-        for c in missing:
-            df_work[c] = np.nan
+    # Fill from available features
+    for c in feature_cols:
+        if c in df_feat.columns:
+            X[c] = pd.to_numeric(df_feat[c], errors='coerce')
     
-    # Select only the required features in the correct order
-    X = df_work[feature_cols].tail(L).values  # (L,F)
-    return X
+    # Fill missing columns with training median (center) so they become 0 after scaling
+    if center is not None:
+        missing_cols = X.columns[X.isna().all(axis=0)]
+        if len(missing_cols) > 0:
+            for col in missing_cols:
+                col_idx = feature_cols.index(col)
+                X[col] = center[col_idx]
+    
+    # Take last L rows
+    X = X.tail(L)
+    return X.values  # (L, F)
+
+def safe_forward(model, xt, tag):
+    """
+    Safe model forward pass with NaN/Inf guards.
+    Raises ValueError if non-finite values detected in input or output.
+    """
+    if not torch.isfinite(xt).all():
+        n_nan = torch.isnan(xt).sum().item()
+        n_inf = torch.isinf(xt).sum().item()
+        raise ValueError(f"Non-finite input tensor for {tag}: NaN={n_nan}, Inf={n_inf}")
+    
+    with torch.no_grad():
+        logit, prof = model(xt)
+    
+    # Check outputs
+    if not torch.isfinite(logit).all() or not torch.isfinite(prof).all():
+        raise ValueError(f"Model output NaN/Inf for {tag}")
+    
+    return logit, prof
 
 # ---------------------------
 # Trading logic on candle close
@@ -407,8 +443,6 @@ def main():
         running = False
     signal.signal(signal.SIGINT, handle_sig)
     signal.signal(signal.SIGTERM, handle_sig)
-
-    tf_ms = timeframe_ms(TIMEFRAME)
     
     iteration = 0  # Counter for tracking progress
 
@@ -419,16 +453,38 @@ def main():
             print(f"\n{'='*60}")
             print(f"📊 Iteration #{iteration} | {now_utc().strftime('%Y-%m-%d %H:%M:%S UTC')}")
             print(f"{'='*60}")
-            # 1) Fetch candles (more than LOOKBACK to ensure enough after indicator calculation)
-            df = fetch_last_candles(ex, SYMBOL, TIMEFRAME, n=LOOKBACK)
+            # 1) Fetch candles (600 for indicator warmup)
+            df = fetch_last_candles(ex, SYMBOL, TIMEFRAME, n=LOOKBACK, safety=600)
+            print(f"📥 Fetched {len(df)} raw candles")
             
             # 2) Build features & sequences (must match training)
             feats = build_features(df)  # adds technicals
             
-            # After indicator calculation, some initial rows may be dropped due to NaN
-            # Check if we have enough data
+            # 3) Clean and validate features
+            # Remove all-NaN columns
+            feats = feats.dropna(how='all', axis=1)
+            
+            # Remove rows with any NaN in critical columns
+            feats = feats.dropna()
+            
+            # Take only last LOOKBACK rows for prediction
+            feats = feats.tail(LOOKBACK)
+            
+            # Check if we have enough clean data
             if len(feats) < LOOKBACK:
-                print(f"⚠️ Not enough valid data after indicators: {len(feats)}/{LOOKBACK}, skipping cycle...")
+                msg = f"⚠️ Not enough valid data after indicators: {len(feats)}/{LOOKBACK}"
+                print(msg)
+                send_telegram(msg)
+                time.sleep(30)  # Wait a bit before retry
+                continue
+            
+            # Diagnostic: check for NaN in last LOOKBACK rows
+            bad_cols = feats.columns[feats.isna().any()].tolist()
+            if bad_cols:
+                msg = f"⚠️ NaNs detected in features: {bad_cols[:10]}{'...' if len(bad_cols)>10 else ''}"
+                print(msg)
+                send_telegram(msg)
+                time.sleep(30)
                 continue
             
             # Get the last candle info (from feats which has cleaned data)
@@ -437,40 +493,60 @@ def main():
             last_close = float(feats["close"].iloc[-1])
 
             # 3) Close logic first (on the just-closed candle)
-            print(f"🔍 Checking exit signals...")
+            print("🔍 Checking exit signals...")
             maybe_close_position("model1", state, last_row)
             maybe_close_position("model2", state, last_row)
 
-            # 4) Model predictions
-            print(f"🔮 Running model predictions...")
+            # 4) Model predictions with safety checks
+            print("🔮 Running model predictions...")
             
             # Model 1
-            X1 = make_sequence_matrix(feats, feature_cols1, LOOKBACK)
+            X1 = make_sequence_matrix(feats, feature_cols1, LOOKBACK, center=center1)
             X1n = transform_with_robust_scaler(X1, center1, scale1)
+            
+            # Diagnostic: check scaled features
+            n_nan_1 = np.isnan(X1n).sum()
+            n_inf_1 = np.isinf(X1n).sum()
+            if n_nan_1 > 0 or n_inf_1 > 0:
+                msg = f"❌ Model1 scaled features: NaN={n_nan_1}, Inf={n_inf_1}"
+                print(msg)
+                send_telegram(msg)
+                time.sleep(30)
+                continue
+            
             x1t = torch.from_numpy(X1n).float().unsqueeze(0)  # (1,L,F)
-            with torch.no_grad():
-                logit1, prof1 = model1(x1t)
-                prob1 = float(torch.sigmoid(logit1).cpu().numpy().reshape(-1)[0])
-                pred_profit1 = float(prof1.cpu().numpy().reshape(-1)[0])
+            logit1, prof1 = safe_forward(model1, x1t, "model1")
+            prob1 = float(torch.sigmoid(logit1).cpu().numpy().reshape(-1)[0])
+            pred_profit1 = float(prof1.cpu().numpy().reshape(-1)[0])
 
             # Model 2
-            X2 = make_sequence_matrix(feats, feature_cols2, LOOKBACK)
+            X2 = make_sequence_matrix(feats, feature_cols2, LOOKBACK, center=center2)
             X2n = transform_with_robust_scaler(X2, center2, scale2)
-            x2t = torch.from_numpy(X2n).float().unsqueeze(0)
-            with torch.no_grad():
-                logit2, prof2 = model2(x2t)
-                prob2 = float(torch.sigmoid(logit2).cpu().numpy().reshape(-1)[0])
-                pred_profit2 = float(prof2.cpu().numpy().reshape(-1)[0])
             
-            print(f"✅ Predictions complete!")
+            # Diagnostic: check scaled features
+            n_nan_2 = np.isnan(X2n).sum()
+            n_inf_2 = np.isinf(X2n).sum()
+            if n_nan_2 > 0 or n_inf_2 > 0:
+                msg = f"❌ Model2 scaled features: NaN={n_nan_2}, Inf={n_inf_2}"
+                print(msg)
+                send_telegram(msg)
+                time.sleep(30)
+                continue
+            
+            x2t = torch.from_numpy(X2n).float().unsqueeze(0)
+            logit2, prof2 = safe_forward(model2, x2t, "model2")
+            prob2 = float(torch.sigmoid(logit2).cpu().numpy().reshape(-1)[0])
+            pred_profit2 = float(prof2.cpu().numpy().reshape(-1)[0])
+            
+            print(f"✅ Predictions complete: model1 p={prob1:.4f}, model2 p={prob2:.4f}")
 
             # 5) Open logic (if no position)
-            print(f"\n💼 Checking entry signals:")
+            print("\n💼 Checking entry signals:")
             maybe_open_position("model1", state, prob1, pred_profit1, last_close)
             maybe_open_position("model2", state, prob2, pred_profit2, last_close)
 
             # 6) Summary
-            print(f"\n📊 Summary:")
+            print("\n📊 Summary:")
             print(f"   Price: {last_close:.6f} @ {last_candle_ts}")
             print(f"   Model1 Balance: ${state['model1']['balance']:.2f} | Position: {'YES' if state['model1']['position'] else 'NO'}")
             print(f"   Model2 Balance: ${state['model2']['balance']:.2f} | Position: {'YES' if state['model2']['position'] else 'NO'}")
