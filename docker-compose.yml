@@ -16,6 +16,11 @@ services:
       # Python configuration
       - PYTHONUNBUFFERED=1
       - TZ=UTC
+      
+      # Optional startup controls (uncomment any to use)
+      - CLEAR_STATE_ON_START=1          # Recreate live_state.json with initial balances; clears positions
+      # - CLOSE_POSITIONS_ON_START=1      # Keep balances but remove any open positions
+      # - FORCE_INIT_BALANCES=1           # Force balances back to INIT_* on startup
     
     volumes:
       # Persist state file

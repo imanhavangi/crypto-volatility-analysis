@@ -16,6 +16,7 @@ import time
 import json
 import signal
 import traceback
+import argparse
 from datetime import datetime, timezone
 
 # Fix encoding for Windows console
@@ -158,6 +159,13 @@ def load_state():
 
 def save_state(st):
     json.dump(st, open(STATE_PATH, "w"), indent=2, default=str)
+
+def truthy_env(var_name: str, default: bool = False) -> bool:
+    """Interpret typical truthy strings from environment variables."""
+    val = os.getenv(var_name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "yes", "on"}
 
 # Position format:
 # {
@@ -404,6 +412,21 @@ def maybe_open_position(model_name, state, prob_entry, pred_profit, last_close):
 # Main loop
 # ---------------------------
 def main():
+    # Startup controls via CLI flags and/or environment variables
+    parser = argparse.ArgumentParser(description="Live signal runner")
+    parser.add_argument("--reset-state", action="store_true", help="Reinitialize live_state.json (balances to INIT_*, positions cleared)")
+    parser.add_argument("--close-positions", action="store_true", help="Close any open positions on startup (keeps current balances)")
+    parser.add_argument("--force-init-balances", action="store_true", help="Reset balances to initial amounts on startup")
+    args, _ = parser.parse_known_args()
+
+    # Env fallbacks
+    env_reset_state = truthy_env("CLEAR_STATE_ON_START", False)
+    env_close_positions = truthy_env("CLOSE_POSITIONS_ON_START", False)
+    env_force_bal = truthy_env("FORCE_INIT_BALANCES", False)
+
+    reset_state_flag = args.reset_state or env_reset_state
+    close_positions_flag = args.close_positions or env_close_positions
+    force_init_balances_flag = args.force_init_balances or env_force_bal
     # Load meta & calibration
     feature_cols1, center1, scale1, look1, cap1 = load_meta(META1_PATH)
     feature_cols2, center2, scale2, look2, cap2 = load_meta(META2_PATH)
@@ -424,10 +447,35 @@ def main():
     model2.load_state_dict(torch.load(WEIGHT2_PATH, map_location="cpu"))
     model2.eval()
 
+    # Optional startup state mutations before doing anything else
+    if reset_state_flag:
+        state = {
+            "model1": {"balance": INIT_BALANCE_MODEL1, "position": None},
+            "model2": {"balance": INIT_BALANCE_MODEL2, "position": None},
+            "last_ts": None,
+        }
+        save_state(state)
+        print("🧹 State has been reset on startup (balances reinitialized, positions cleared).")
+    else:
+        # Load existing or default
+        state = load_state()
+        if force_init_balances_flag:
+            state["model1"]["balance"] = INIT_BALANCE_MODEL1
+            state["model2"]["balance"] = INIT_BALANCE_MODEL2
+            print("💰 Balances reset to initial amounts on startup.")
+        if close_positions_flag:
+            if state["model1"].get("position"):
+                state["model1"]["position"] = None
+            if state["model2"].get("position"):
+                state["model2"]["position"] = None
+            print("🚪 Any open positions were closed on startup (state cleared).")
+        save_state(state)
+
     # Exchange
     ex = load_exchange(EXCHANGE)
 
     # State
+    # Ensure state is loaded (could be created above on reset)
     state = load_state()
     state["_calib"] = {
         "model1": {"tau": calib1["tau"], "gamma": calib1["gamma"]},
