@@ -587,7 +587,7 @@ def main():
             x1t = torch.from_numpy(X1n).float().unsqueeze(0)  # (1,L,F)
             logit1, prof1 = safe_forward(model1, x1t, "model1")
             prob1 = float(torch.sigmoid(logit1).cpu().numpy().reshape(-1)[0])
-            pred_profit1 = float(prof1.cpu().numpy().reshape(-1)[0]) * 0.4  # scale to realistic TP
+            pred_profit1 = float(prof1.cpu().numpy().reshape(-1)[0]) * 0.07  # scale to realistic TP
 
             # Model 2
             X2 = make_sequence_matrix(feats, feature_cols2, LOOKBACK, center=center2)
@@ -606,7 +606,7 @@ def main():
             x2t = torch.from_numpy(X2n).float().unsqueeze(0)
             logit2, prof2 = safe_forward(model2, x2t, "model2")
             prob2 = float(torch.sigmoid(logit2).cpu().numpy().reshape(-1)[0])
-            pred_profit2 = float(prof2.cpu().numpy().reshape(-1)[0]) * 0.4  # scale to realistic TP
+            pred_profit2 = float(prof2.cpu().numpy().reshape(-1)[0]) * 0.07  # scale to realistic TP
             
             print(f"✅ Predictions complete: model1 p={prob1:.4f}, model2 p={prob2:.4f}")
 
