@@ -44,7 +44,7 @@ LOOKBACK = 60
 
 # Position sizing
 MAX_POSITION_PCT = 1.0   # 100% از موجودی هر مدل
-TAKER_FEE = 0.002       # 0.2% (ورود + خروج اعمال میشه)
+TAKER_FEE = 0.001       # 0.2% (ورود + خروج اعمال میشه)
 
 # Initial balances for two models
 INIT_BALANCE_MODEL1 = 1000.0
@@ -386,16 +386,17 @@ def maybe_open_position(model_name, state, prob_entry, pred_profit, last_close):
     
     # No position, check entry criteria
     signal_status = "🟢 ENTRY!" if prob_entry >= tau else "⚪ No signal"
-    print(f"{status_emoji} {model_name}: p={prob_entry:.4f} (tau={tau:.4f}) | predTP={pred_profit*100:.2f}% | {signal_status} | Balance: ${state[model_name]['balance']:.2f}")
+    print(f"{status_emoji} {model_name}: p={prob_entry:.4f} (tau={tau:.4f}) | predTP={pred_profit*100*0.4:.2f}% | {signal_status} | Balance: ${state[model_name]['balance']:.2f}")
 
     if prob_entry >= tau:
-        tp_pct = float(pred_profit)  # e.g., 0.05
+        tp_pct = float(pred_profit) # e.g., 0.05
         sl_pct = float(gamma) * tp_pct
 
         entry_price = last_close
         balance = state[model_name]["balance"]
         trade_amt = balance * MAX_POSITION_PCT
-        qty = (trade_amt * (1 - TAKER_FEE)) / entry_price  # fee on buy
+        # Use net-of-buy-fee quantity so total quote outflow fits within balance
+        qty = (trade_amt * (1 - TAKER_FEE)) / entry_price
 
         tp_price = entry_price * (1 + tp_pct)
         sl_price = entry_price * (1 - sl_pct)
@@ -408,7 +409,16 @@ def maybe_open_position(model_name, state, prob_entry, pred_profit, last_close):
             "sl_price": sl_price
         }
 
-        print(f"🚀 {model_name}: Position OPENED | Entry={entry_price:.6f} | TP={tp_price:.6f} (+{tp_pct*100:.2f}%) | SL={sl_price:.6f} (-{sl_pct*100:.2f}%) | Qty={qty:.2f}")
+        # Warn if target profit is below estimated round-trip taker fees (entry+exit)
+        roundtrip_fee_pct = 2 * TAKER_FEE
+        fee_note = ""
+        if tp_pct <= roundtrip_fee_pct:
+            fee_note = "\nNote: TP < round-trip fee → net PnL may be negative even on TP."
+
+        print(
+            f"🚀 {model_name}: Position OPENED | Entry={entry_price:.6f} | TP={tp_price:.6f} (+{tp_pct*100:.2f}%) | "
+            f"SL={sl_price:.6f} (-{sl_pct*100:.2f}%) | Qty={qty:.2f}{fee_note}"
+        )
         
         msg = (
             f"🟢 <b>Open</b> | <i>{model_name}</i>\n"
@@ -416,7 +426,7 @@ def maybe_open_position(model_name, state, prob_entry, pred_profit, last_close):
             f"TP: {tp_price:.6f} (+{tp_pct*100:.2f}%)\n"
             f"SL: {sl_price:.6f} (-{sl_pct*100:.2f}%)\n"
             f"Qty: {qty:.2f}\n"
-            f"Balance: {balance:.2f} USDT"
+            f"Balance: {balance:.2f} USDT" + ("\n⚠️ TP below round-trip fees" if fee_note else "")
         )
         send_telegram(msg)
 
@@ -577,7 +587,7 @@ def main():
             x1t = torch.from_numpy(X1n).float().unsqueeze(0)  # (1,L,F)
             logit1, prof1 = safe_forward(model1, x1t, "model1")
             prob1 = float(torch.sigmoid(logit1).cpu().numpy().reshape(-1)[0])
-            pred_profit1 = float(prof1.cpu().numpy().reshape(-1)[0])
+            pred_profit1 = float(prof1.cpu().numpy().reshape(-1)[0]) * 0.4  # scale to realistic TP
 
             # Model 2
             X2 = make_sequence_matrix(feats, feature_cols2, LOOKBACK, center=center2)
@@ -596,7 +606,7 @@ def main():
             x2t = torch.from_numpy(X2n).float().unsqueeze(0)
             logit2, prof2 = safe_forward(model2, x2t, "model2")
             prob2 = float(torch.sigmoid(logit2).cpu().numpy().reshape(-1)[0])
-            pred_profit2 = float(prof2.cpu().numpy().reshape(-1)[0])
+            pred_profit2 = float(prof2.cpu().numpy().reshape(-1)[0]) * 0.4  # scale to realistic TP
             
             print(f"✅ Predictions complete: model1 p={prob1:.4f}, model2 p={prob2:.4f}")
 
