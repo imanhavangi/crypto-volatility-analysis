@@ -44,7 +44,7 @@ LOOKBACK = 60
 
 # Position sizing
 MAX_POSITION_PCT = 1.0   # 100% از موجودی هر مدل
-TAKER_FEE = 0.0026       # 0.26% (ورود + خروج اعمال میشه)
+TAKER_FEE = 0.002       # 0.2% (ورود + خروج اعمال میشه)
 
 # Initial balances for two models
 INIT_BALANCE_MODEL1 = 1000.0
@@ -53,6 +53,7 @@ INIT_BALANCE_MODEL2 = 1000.0
 # Telegram
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+CHAT_ID_2 = os.getenv("TELEGRAM_CHAT_ID_2", "")
 
 # Paths
 CALIB_PATH = "models/calibration.json"
@@ -138,6 +139,17 @@ def send_telegram(msg):
         requests.post(url, json={"chat_id": CHAT_ID, "text": msg, "parse_mode": "HTML"}, timeout=10)
     except Exception as e:
         print("[TG] Error:", e)
+
+def send_telegram_to(chat_id: str, msg: str):
+    """Send telegram message to a specific chat id (fallback to DRY print)."""
+    if not BOT_TOKEN or not chat_id:
+        print(f"[TG2][DRY] {msg}")
+        return
+    try:
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+        requests.post(url, json={"chat_id": chat_id, "text": msg, "parse_mode": "HTML"}, timeout=10)
+    except Exception as e:
+        print("[TG2] Error:", e)
 
 def timeframe_ms(tf="1m"):
     return {"1m":60_000,"3m":180_000,"5m":300_000,"15m":900_000,"1h":3_600_000}.get(tf,60_000)
@@ -587,6 +599,21 @@ def main():
             pred_profit2 = float(prof2.cpu().numpy().reshape(-1)[0])
             
             print(f"✅ Predictions complete: model1 p={prob1:.4f}, model2 p={prob2:.4f}")
+
+            # If either model has p>=0.5, send a compact signal to the second channel
+            try:
+                threshold_secondary = 0.5
+                if (prob1 >= threshold_secondary) or (prob2 >= threshold_secondary):
+                    msg2 = (
+                        f"📈 <b>Prob Alert</b> (>= {threshold_secondary:.2f})\n"
+                        f"Model1: p={prob1:.3f} | predTP={pred_profit1*100:.2f}%\n"
+                        f"Model2: p={prob2:.3f} | predTP={pred_profit2*100:.2f}%\n"
+                        f"Price: {last_close:.6f} @ {last_candle_ts}"
+                    )
+                    send_telegram_to(CHAT_ID_2, msg2)
+            except Exception as _:
+                # Don't break the loop on secondary channel issues
+                pass
 
             # 5) Open logic (if no position)
             print("\n💼 Checking entry signals:")

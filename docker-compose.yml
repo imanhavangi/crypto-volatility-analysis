@@ -12,6 +12,7 @@ services:
       # Telegram configuration (set these in .env file)
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - TELEGRAM_CHAT_ID_2=${TELEGRAM_CHAT_ID_2:-}
       
       # Python configuration
       - PYTHONUNBUFFERED=1
